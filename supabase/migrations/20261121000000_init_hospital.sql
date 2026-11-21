@@ -11,7 +11,7 @@ create type public.invoice_status as enum ('unpaid', 'partial', 'paid', 'cancell
 
 -- ---------- Helpers ----------
 create or replace function public.set_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public as $$
 begin
   new.updated_at = now();
   return new;
@@ -184,3 +184,10 @@ begin
     execute format('create policy "admin delete" on public.%I for delete to authenticated using (public.is_admin())', t);
   end loop;
 end $$;
+
+-- Helper functions are not part of the public API
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.is_staff() from public, anon;
+revoke execute on function public.is_admin() from public, anon;
+revoke execute on function public.my_role() from public, anon;
+grant execute on function public.is_staff(), public.is_admin(), public.my_role() to authenticated;
