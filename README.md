@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Daljir Hospital Management System
 
-## Getting Started
+A CRUD hospital management system built with **Next.js 16**, **Supabase** (Postgres, Auth, Row Level Security) and **Tailwind CSS**, ready to deploy on **Vercel**.
 
-First, run the development server:
+## Modules
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+| Module | What it does |
+| --- | --- |
+| Dashboard | Patients, active doctors, today's appointments, outstanding bills, upcoming visits, low-stock medicines |
+| Patients | Patient register with auto patient number (P-1001…), blood group, notes |
+| Doctors | Doctors, specialization, department, consultation fee, active flag |
+| Departments | Hospital units |
+| Appointments | Book visits (patient + doctor + time), status tracking |
+| Pharmacy | Medicine stock, price, reorder level, expiry |
+| Billing | Invoices (INV-1001…), amount paid, status, EVC Plus / Zaad / Sahal / eDahab / cash… |
+| Staff (admin) | Approve new accounts and assign roles |
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Every module has list (search + pagination), create, edit and delete. Modules are defined in one file, `src/lib/resources.ts`; adding a field there adds it to the form and list.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Security
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Sign-in with Supabase Auth (email + password).
+- **The first account becomes admin.** Every later sign-up is `pending` and sees no data until an admin assigns a role on the Staff page.
+- RLS: approved staff can read, create and edit; only admins can delete records or change roles.
 
-## Learn More
+## Setup
 
-To learn more about Next.js, take a look at the following resources:
+1. Create a Supabase project.
+2. In Supabase, open **SQL Editor** and run `supabase/migrations/20261121000000_init_hospital.sql`, then (optional) `supabase/seed.sql`.
+   Or with the CLI: `supabase link` then `supabase db push`.
+3. Copy `.env.example` to `.env.local` and fill in the values from **Project Settings → API**:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=...
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...   # or the anon key
+   ```
+4. `npm install` then `npm run dev`, open http://localhost:3000 and create the first (admin) account.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploy to Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Push this folder to a GitHub repository.
+2. In Vercel, **Add New → Project**, import the repository.
+3. Add the two environment variables above, then **Deploy**.
+4. In Supabase **Authentication → URL Configuration**, set the Site URL to your Vercel domain.
 
-## Deploy on Vercel
+## Notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Times are shown in East Africa Time (`Africa/Mogadishu`); change `src/lib/format.ts` if needed.
+- Money is shown in USD.

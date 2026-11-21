@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 
+// Every page in this app reads the signed-in user's session (cookies),
+// so pages render per request. Cache Components is left off on purpose.
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
   turbopack: {
     rules: {
       "*.css": {
