@@ -12,7 +12,8 @@ export type FieldType =
   | "datetime"
   | "select"
   | "relation"
-  | "boolean";
+  | "boolean"
+  | "image";
 
 export type Option = { value: string; label: string };
 
@@ -44,6 +45,8 @@ export type Resource = {
   searchColumns: string[];
   /** Column used as the record's display name */
   titleColumn: string;
+  /** Column holding a photo URL, shown as an avatar next to the name */
+  photoColumn?: string;
   orderBy: { column: string; ascending: boolean };
   fields: Field[];
 };
@@ -75,13 +78,15 @@ export const resources: Resource[] = [
     icon: "users",
     searchColumns: ["full_name", "patient_no", "phone"],
     titleColumn: "full_name",
+    photoColumn: "photo_url",
     orderBy: { column: "created_at", ascending: false },
     fields: [
+      { name: "photo_url", label: "Photo", type: "image", wide: true },
       { name: "patient_no", label: "Patient No.", type: "text", list: true, readOnly: true },
       { name: "full_name", label: "Full name", type: "text", required: true, list: true },
       { name: "gender", label: "Gender", type: "select", required: true, options: opts("male", "female"), list: true },
       { name: "date_of_birth", label: "Date of birth", type: "date", list: true },
-      { name: "phone", label: "Phone", type: "tel", placeholder: "+252 61 ...", list: true },
+      { name: "phone", label: "Phone (WhatsApp)", type: "tel", placeholder: "61 xxx xxxx", list: true },
       {
         name: "blood_group",
         label: "Blood group",
@@ -103,8 +108,10 @@ export const resources: Resource[] = [
     icon: "stethoscope",
     searchColumns: ["full_name", "specialization", "phone"],
     titleColumn: "full_name",
+    photoColumn: "photo_url",
     orderBy: { column: "full_name", ascending: true },
     fields: [
+      { name: "photo_url", label: "Photo", type: "image", wide: true },
       { name: "full_name", label: "Full name", type: "text", required: true, list: true },
       { name: "specialization", label: "Specialization", type: "text", required: true, list: true },
       {
@@ -117,6 +124,10 @@ export const resources: Resource[] = [
       { name: "phone", label: "Phone", type: "tel", list: true },
       { name: "email", label: "Email", type: "email" },
       { name: "consultation_fee", label: "Consultation fee ($)", type: "money", list: true },
+      { name: "years_experience", label: "Years of experience", type: "number" },
+      { name: "working_days", label: "Working days", type: "text", placeholder: "Sat – Thu" },
+      { name: "working_hours", label: "Working hours", type: "text", placeholder: "8:00 AM – 4:00 PM" },
+      { name: "bio", label: "Biography", type: "textarea", wide: true },
       { name: "is_active", label: "Active", type: "boolean", list: true },
     ],
   },

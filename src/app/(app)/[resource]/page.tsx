@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CheckCircle2, ChevronLeft, ChevronRight, Pencil, Plus, Search } from "lucide-react";
-import { Badge } from "@/components/badge";
+import { Avatar } from "@/components/avatar";
 import { DeleteButton } from "@/components/delete-button";
 import { PageHeader } from "@/components/page-header";
 import { selectWithRelations } from "@/lib/data";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
-import { getResource, type Field } from "@/lib/resources";
+import { getResource } from "@/lib/resources";
+import { Cell } from "@/components/field-value";
 import { createClient } from "@/lib/supabase/server";
 import { deleteRecord } from "./actions";
 
@@ -19,39 +19,6 @@ export async function generateMetadata({ params }: PageProps<"/[resource]">): Pr
 }
 
 type Row = Record<string, unknown> & { id: string };
-
-function Cell({ field, row }: { field: Field; row: Row }) {
-  const value = row[field.name];
-  if (field.type === "relation") {
-    const rel = row[`${field.name}__rel`] as Record<string, string> | null;
-    return <>{rel?.[field.relation!.labelColumn] ?? "—"}</>;
-  }
-  if (value === null || value === undefined || value === "") return <span className="text-slate-400">—</span>;
-  switch (field.type) {
-    case "money":
-      return <span className="tabular-nums">{formatMoney(value as number)}</span>;
-    case "date":
-      return <>{formatDate(value as string)}</>;
-    case "datetime":
-      return <>{formatDateTime(value as string)}</>;
-    case "boolean":
-      return <Badge value={value ? "active" : "inactive"} label={value ? "Yes" : "No"} />;
-    case "select":
-      if (field.name === "status" || field.name === "gender") {
-        return <Badge value={String(value)} label={field.options?.find((o) => o.value === value)?.label} />;
-      }
-      return <>{field.options?.find((o) => o.value === value)?.label ?? String(value)}</>;
-    case "number":
-      if (field.name === "stock_quantity" && typeof row.reorder_level === "number" && (value as number) <= row.reorder_level) {
-        return <Badge value={(value as number) === 0 ? "unpaid" : "low"} label={String(value)} />;
-      }
-      return <span className="tabular-nums">{String(value)}</span>;
-    case "textarea":
-      return <span className="line-clamp-1 max-w-xs">{String(value)}</span>;
-    default:
-      return <>{String(value)}</>;
-  }
-}
 
 export default async function ResourceListPage({ params, searchParams }: PageProps<"/[resource]">) {
   const { resource: slug } = await params;
@@ -80,7 +47,9 @@ export default async function ResourceListPage({ params, searchParams }: PagePro
   const rows = (data ?? []) as unknown as Row[];
   const total = count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const columns = resource.fields.filter((f) => f.list);
+  const listed = resource.fields.filter((f) => f.list && f.type !== "image");
+  const titleField = listed.find((f) => f.name === resource.titleColumn);
+  const columns = resource.photoColumn && titleField ? [titleField, ...listed.filter((f) => f !== titleField)] : listed;
   const pageHref = (p: number) => `/${slug}?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
 
   return (
@@ -148,8 +117,13 @@ export default async function ResourceListPage({ params, searchParams }: PagePro
                     {columns.map((c, i) => (
                       <td key={c.name} className={`whitespace-nowrap px-4 py-3 ${i === 0 ? "font-medium text-slate-900" : "text-slate-600"}`}>
                         {i === 0 ? (
-                          <Link href={`/${slug}/${row.id}`} className="hover:text-teal-700 hover:underline">
-                            <Cell field={c} row={row} />
+                          <Link href={`/${slug}/${row.id}`} className="inline-flex items-center gap-3 hover:text-teal-700">
+                            {resource.photoColumn && (
+                              <Avatar name={String(row[resource.titleColumn] ?? "")} src={row[resource.photoColumn] as string | null} size="sm" />
+                            )}
+                            <span className="hover:underline">
+                              <Cell field={c} row={row} />
+                            </span>
                           </Link>
                         ) : (
                           <Cell field={c} row={row} />
@@ -159,7 +133,7 @@ export default async function ResourceListPage({ params, searchParams }: PagePro
                     <td className="whitespace-nowrap px-4 py-2 text-right">
                       <div className="inline-flex items-center gap-1">
                         <Link
-                          href={`/${slug}/${row.id}`}
+                          href={`/${slug}/${row.id}/edit`}
                           className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                           aria-label="Edit"
                           title="Edit"

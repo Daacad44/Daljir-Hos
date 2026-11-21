@@ -7,8 +7,8 @@ import { signIn, signUp, type AuthState } from "./actions";
 const inputClass =
   "w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20";
 
-export function LoginForm() {
-  const [mode, setMode] = useState<"in" | "up">("in");
+export function LoginForm({ initialMode = "in" }: { initialMode?: "in" | "up" }) {
+  const [mode, setMode] = useState<"in" | "up">(initialMode);
   const [inState, inAction, inPending] = useActionState<AuthState, FormData>(signIn, {});
   const [upState, upAction, upPending] = useActionState<AuthState, FormData>(signUp, {});
   const state = mode === "in" ? inState : upState;

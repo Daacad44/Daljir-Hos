@@ -44,3 +44,8 @@ export function todayRange() {
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   return { start: start.toISOString(), end: end.toISOString(), date: local };
 }
+
+/** Current time in ms (kept out of components for the React purity lint) */
+export function nowMs() {
+  return Date.now();
+}

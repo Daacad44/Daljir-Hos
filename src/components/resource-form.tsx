@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import { Loader2 } from "lucide-react";
+import { useActionState, useState } from "react";
+import { ImagePlus, Loader2 } from "lucide-react";
 import type { Field, Option } from "@/lib/resources";
 import type { FormState } from "@/app/(app)/[resource]/actions";
 
@@ -45,6 +45,9 @@ export function ResourceForm({
             };
             let control: React.ReactNode;
             switch (field.type) {
+              case "image":
+                control = <ImageInput name={field.name} current={typeof value === "string" ? value : ""} />;
+                break;
               case "textarea":
                 control = <textarea {...common} rows={4} defaultValue={String(value ?? "")} placeholder={field.placeholder} className={inputClass} />;
                 break;
@@ -118,5 +121,52 @@ export function ResourceForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function ImageInput({ name, current }: { name: string; current: string }) {
+  const [preview, setPreview] = useState<string>(current);
+  const [tooBig, setTooBig] = useState(false);
+  return (
+    <div className="flex items-center gap-4">
+      <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-full border border-dashed border-slate-300 bg-slate-50">
+        {preview ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={preview} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <ImagePlus className="h-6 w-6 text-slate-400" />
+        )}
+      </div>
+      <div className="space-y-2 text-sm">
+        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50">
+          {preview ? "Change photo" : "Upload photo"}
+          <input
+            type="file"
+            name={name}
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const big = file.size > 3 * 1024 * 1024;
+              setTooBig(big);
+              if (big) {
+                e.target.value = "";
+                return;
+              }
+              setPreview(URL.createObjectURL(file));
+            }}
+          />
+        </label>
+        {current && (
+          <label className="flex items-center gap-2 text-xs text-slate-500">
+            <input type="checkbox" name={`${name}__remove`} className="accent-rose-600" /> Remove current photo
+          </label>
+        )}
+        <p className={`text-xs ${tooBig ? "text-rose-600" : "text-slate-400"}`}>
+          {tooBig ? "That photo is larger than 3 MB." : "JPG, PNG or WebP, up to 3 MB."}
+        </p>
+      </div>
+    </div>
   );
 }

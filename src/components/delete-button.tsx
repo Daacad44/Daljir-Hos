@@ -1,10 +1,22 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import type { FormState } from "@/app/(app)/[resource]/actions";
 
-export function DeleteButton({ action, label }: { action: () => Promise<FormState>; label: string }) {
+export function DeleteButton({
+  action,
+  label,
+  redirectTo,
+  variant = "icon",
+}: {
+  action: () => Promise<FormState>;
+  label: string;
+  redirectTo?: string;
+  variant?: "icon" | "button";
+}) {
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string>();
   const [pending, startTransition] = useTransition();
@@ -14,11 +26,16 @@ export function DeleteButton({ action, label }: { action: () => Promise<FormStat
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-md p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+        className={
+          variant === "button"
+            ? "inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50"
+            : "rounded-md p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+        }
         aria-label={`Delete ${label}`}
         title="Delete"
       >
         <Trash2 className="h-4 w-4" />
+        {variant === "button" && "Delete"}
       </button>
     );
   }
@@ -37,6 +54,7 @@ export function DeleteButton({ action, label }: { action: () => Promise<FormStat
           startTransition(async () => {
             const res = await action();
             if (res.error) setError(res.error);
+            else if (redirectTo) router.push(redirectTo);
             else setConfirming(false);
           })
         }

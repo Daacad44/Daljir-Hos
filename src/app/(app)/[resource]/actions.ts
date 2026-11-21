@@ -8,6 +8,24 @@ import { fromDateTimeInput } from "@/lib/format";
 
 export type FormState = { error?: string; fieldErrors?: Record<string, string> };
 
+const IMAGE_TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+
+/** Upload a photo to the public "photos" bucket and return its URL. */
+async function uploadImage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  folder: string,
+  file: File,
+): Promise<{ url?: string; error?: string }> {
+  const ext = IMAGE_TYPES[file.type];
+  if (!ext) return { error: "Photo must be a JPG, PNG or WebP image" };
+  if (file.size > MAX_IMAGE_BYTES) return { error: "Photo must be smaller than 3 MB" };
+  const path = `${folder}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from("photos").upload(path, file, { contentType: file.type, upsert: false });
+  if (error) return { error: `Upload failed: ${error.message}` };
+  return { url: supabase.storage.from("photos").getPublicUrl(path).data.publicUrl };
+}
+
 function parseField(field: Field, raw: FormDataEntryValue | null): { value: unknown; error?: string } {
   if (field.type === "boolean") return { value: raw === "on" };
   const text = typeof raw === "string" ? raw.trim() : "";
@@ -55,17 +73,28 @@ export async function saveRecord(
   const resource = getResource(slug);
   if (!resource) return { error: "Unknown module" };
 
+  const supabase = await createClient();
   const payload: Record<string, unknown> = {};
   const fieldErrors: Record<string, string> = {};
   for (const field of resource.fields) {
     if (field.readOnly) continue;
+    if (field.type === "image") {
+      const file = formData.get(field.name);
+      if (file instanceof File && file.size > 0) {
+        const { url, error } = await uploadImage(supabase, resource.table, file);
+        if (error) fieldErrors[field.name] = error;
+        else payload[field.name] = url;
+      } else if (formData.get(`${field.name}__remove`) === "on") {
+        payload[field.name] = null;
+      }
+      continue;
+    }
     const { value, error } = parseField(field, formData.get(field.name));
     if (error) fieldErrors[field.name] = error;
     else payload[field.name] = value;
   }
   if (Object.keys(fieldErrors).length) return { error: "Please fix the highlighted fields.", fieldErrors };
 
-  const supabase = await createClient();
   const query = id
     ? supabase.from(resource.table).update(payload).eq("id", id).select("id")
     : supabase.from(resource.table).insert(payload).select("id");
@@ -75,7 +104,7 @@ export async function saveRecord(
 
   revalidatePath(`/${slug}`);
   revalidatePath("/dashboard");
-  redirect(`/${slug}?saved=1`);
+  redirect(`/${slug}/${data[0].id}?saved=1`);
 }
 
 export async function deleteRecord(slug: string, id: string): Promise<FormState> {

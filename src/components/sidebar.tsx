@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { HeartPulse, LogOut, Menu, X } from "lucide-react";
+import { Avatar } from "./avatar";
 import { icons } from "./icons";
 
 type NavItem = { href: string; label: string; icon: string };
@@ -14,7 +15,7 @@ export function Sidebar({
   signOut,
 }: {
   items: NavItem[];
-  user: { fullName: string; role: string };
+  user: { fullName: string; role: string; avatarUrl: string | null };
   signOut: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -55,8 +56,13 @@ export function Sidebar({
       </div>
       {nav}
       <div className="mx-3 rounded-lg border border-slate-200 p-3">
-        <p className="truncate text-sm font-semibold text-slate-900">{user.fullName}</p>
-        <p className="text-xs capitalize text-slate-500">{user.role}</p>
+        <Link href="/profile" onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-md hover:bg-slate-50">
+          <Avatar name={user.fullName} src={user.avatarUrl} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-900">{user.fullName}</p>
+            <p className="text-xs capitalize text-slate-500">{user.role} · My profile</p>
+          </div>
+        </Link>
         <form action={signOut}>
           <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
             <LogOut className="h-3.5 w-3.5" /> Sign out

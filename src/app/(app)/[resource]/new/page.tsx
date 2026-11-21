@@ -15,8 +15,9 @@ export async function generateMetadata({ params }: PageProps<"/[resource]/new">)
   return { title: r ? `New ${r.singular.toLowerCase()}` : "Not found" };
 }
 
-export default async function NewRecordPage({ params }: PageProps<"/[resource]/new">) {
+export default async function NewRecordPage({ params, searchParams }: PageProps<"/[resource]/new">) {
   const { resource: slug } = await params;
+  const sp = await searchParams;
   const resource = getResource(slug);
   if (!resource) notFound();
 
@@ -28,6 +29,9 @@ export default async function NewRecordPage({ params }: PageProps<"/[resource]/n
     if (f.name === "status" && f.options) values.status = f.options[0].value;
     if (f.name === "issued_on") values.issued_on = todayRange().date;
     if (f.type === "boolean") values[f.name] = true;
+    // Prefill from the URL, e.g. /appointments/new?patient_id=…
+    const preset = sp[f.name];
+    if (typeof preset === "string" && f.type !== "image") values[f.name] = preset;
   }
 
   return (
