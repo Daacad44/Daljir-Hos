@@ -94,29 +94,34 @@ begin
   end if;
 end $$;
 
--- ---------- Admin: delete a staff account ----------
-create or replace function public.admin_delete_user(p_user_id uuid)
+-- ---------- Admin: archive a staff account ----------
+-- Hospitals keep staff history, so "remove" blocks the login and hides the
+-- account instead of erasing it.
+alter table public.profiles add column if not exists archived_at timestamptz;
+
+create or replace function public.admin_archive_user(p_user_id uuid)
 returns void language plpgsql security definer set search_path = public, auth as $$
 begin
   if not public.is_admin() then
-    raise exception 'Only admins can delete staff accounts';
+    raise exception 'Only admins can remove staff accounts';
   end if;
   if p_user_id = auth.uid() then
-    raise exception 'You cannot delete your own account';
+    raise exception 'You cannot remove your own account';
   end if;
   if exists (select 1 from public.profiles where id = p_user_id and is_owner) then
-    raise exception 'The owner account cannot be deleted';
+    raise exception 'The owner account cannot be removed';
   end if;
-  delete from auth.users where id = p_user_id;
+  update auth.users set banned_until = 'infinity', updated_at = now() where id = p_user_id;
   if not found then
     raise exception 'Account not found';
   end if;
+  update public.profiles set is_active = false, archived_at = now() where id = p_user_id;
 end $$;
 
 revoke execute on function public.admin_create_user(text, text, text, public.staff_role, text, text) from public, anon;
 revoke execute on function public.admin_set_password(uuid, text) from public, anon;
-revoke execute on function public.admin_delete_user(uuid) from public, anon;
+revoke execute on function public.admin_archive_user(uuid) from public, anon;
 revoke execute on function public.protect_owner() from public, anon, authenticated;
 grant execute on function public.admin_create_user(text, text, text, public.staff_role, text, text) to authenticated;
 grant execute on function public.admin_set_password(uuid, text) to authenticated;
-grant execute on function public.admin_delete_user(uuid) to authenticated;
+grant execute on function public.admin_archive_user(uuid) to authenticated;

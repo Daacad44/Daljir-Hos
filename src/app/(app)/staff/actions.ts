@@ -91,12 +91,12 @@ export async function resetStaffPassword(id: string, _prev: StaffFormState, form
   return { message: "Password changed. Share the new password with the staff member." };
 }
 
-/** Admin: permanently delete a staff account. */
+/** Admin: remove a staff account (login blocked, history kept). */
 export async function deleteStaff(id: string): Promise<{ error?: string }> {
   const me = await getCurrentUser();
-  if (me.role !== "admin") return { error: "Only admins can delete staff." };
+  if (me.role !== "admin") return { error: "Only admins can remove staff." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("admin_delete_user", { p_user_id: id });
+  const { error } = await supabase.rpc("admin_archive_user", { p_user_id: id });
   if (error) return { error: dbError(error.message) };
   revalidatePath("/staff");
   return {};

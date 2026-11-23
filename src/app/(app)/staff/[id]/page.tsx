@@ -57,8 +57,8 @@ export default async function EditStaffPage({ params }: PageProps<"/staff/[id]">
       {id !== me.id && !s.is_owner && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-white p-6 shadow-sm">
           <div>
-            <h2 className="font-semibold text-slate-900">Delete account</h2>
-            <p className="text-sm text-slate-500">Removes the login permanently. Patient records they created stay. Prefer Deactivate if they may return.</p>
+            <h2 className="font-semibold text-slate-900">Remove account</h2>
+            <p className="text-sm text-slate-500">Blocks the login for good and hides the account from the staff list. Their history is kept.</p>
           </div>
           <DeleteButton action={deleteStaff.bind(null, id)} label="staff account" redirectTo="/staff" variant="button" />
         </div>

@@ -22,6 +22,7 @@ type Staff = {
   role: string;
   is_active: boolean;
   is_owner: boolean;
+  archived_at: string | null;
   avatar_url: string | null;
   created_at: string;
 };
@@ -40,15 +41,18 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
   const [{ data }, { data: signIns }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, email, phone, job_title, role, is_active, is_owner, avatar_url, created_at")
+      .select("id, full_name, email, phone, job_title, role, is_active, is_owner, archived_at, avatar_url, created_at")
       .order("created_at", { ascending: false })
       .returns<Staff[]>(),
     supabase.rpc("staff_last_sign_in"),
   ]);
-  const all = data ?? [];
+  const everyone = data ?? [];
+  const all = everyone.filter((s) => !s.archived_at);
+  const archived = everyone.filter((s) => s.archived_at);
   const lastSeen = new Map(((signIns ?? []) as { id: string; last_sign_in_at: string | null }[]).map((r) => [r.id, r.last_sign_in_at]));
 
-  const staff = all.filter((s) => {
+  const staff = (roleFilter === "removed" ? archived : all).filter((s) => {
+    if (roleFilter === "removed") return !q || [s.full_name, s.email].some((v) => v?.toLowerCase().includes(q));
     if (roleFilter === "inactive" ? s.is_active : roleFilter && s.role !== roleFilter) return false;
     if (q && ![s.full_name, s.email, s.phone, s.job_title].some((v) => v?.toLowerCase().includes(q))) return false;
     return true;
@@ -60,7 +64,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
     { label: "Waiting approval", value: all.filter((s) => s.role === "pending").length, icon: ShieldCheck, tone: "bg-amber-50 text-amber-700" },
     { label: "Deactivated", value: all.filter((s) => !s.is_active).length, icon: UserX, tone: "bg-rose-50 text-rose-700" },
   ];
-  const filters = [{ value: "", label: "All" }, ...STAFF_ROLES.map((r) => ({ value: r.value, label: r.label })), { value: "inactive", label: "Deactivated" }];
+  const filters = [{ value: "", label: "All" }, ...STAFF_ROLES.map((r) => ({ value: r.value, label: r.label })), { value: "inactive", label: "Deactivated" }, { value: "removed", label: `Removed (${archived.length})` }];
   const roleLabel = (v: string) => STAFF_ROLES.find((r) => r.value === v)?.label ?? v;
 
   return (
@@ -168,6 +172,10 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {s.archived_at ? (
+                      <span className="text-xs text-slate-400">Removed {formatDate(s.archived_at)}</span>
+                    ) : (
+                    <>
                     {!isMe && s.role === "pending" && (
                       <form action={quickSetRole.bind(null, s.id, "receptionist")}>
                         <button className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700">
@@ -194,6 +202,8 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                     >
                       <Pencil className="h-3.5 w-3.5" /> Edit
                     </Link>
+                    </>
+                    )}
                   </div>
                 </li>
               );
