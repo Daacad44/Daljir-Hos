@@ -13,12 +13,15 @@ export function StaffForm({
   values,
   roles,
   isSelf,
+  locked = false,
 }: {
   action: (s: StaffFormState, f: FormData) => Promise<StaffFormState>;
   values: { full_name: string; phone: string; job_title: string; role: string; is_active: boolean; email: string };
   roles: { value: string; label: string; description: string }[];
   isSelf: boolean;
+  locked?: boolean;
 }) {
+  const fixed = isSelf || locked;
   const [state, formAction, pending] = useActionState(action, {});
   return (
     <form action={formAction} className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -40,8 +43,15 @@ export function StaffForm({
           <span className="mb-1.5 block text-sm font-medium text-slate-700">Job title</span>
           <input name="job_title" defaultValue={values.job_title} placeholder="Head nurse, Cashier…" className={input} />
         </label>
-        <fieldset className="sm:col-span-2" disabled={isSelf}>
-          <legend className="mb-2 text-sm font-medium text-slate-700">Role {isSelf && <span className="font-normal text-slate-400">(you cannot change your own role)</span>}</legend>
+        <fieldset className="sm:col-span-2" disabled={fixed}>
+          <legend className="mb-2 text-sm font-medium text-slate-700">
+            Role{" "}
+            {fixed && (
+              <span className="font-normal text-slate-400">
+                ({locked ? "the owner always stays an admin" : "you cannot change your own role"})
+              </span>
+            )}
+          </legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {roles.map((r) => (
               <label key={r.value} className="flex cursor-pointer gap-3 rounded-lg border border-slate-200 p-3 has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50/50">
@@ -54,7 +64,7 @@ export function StaffForm({
             ))}
           </div>
         </fieldset>
-        {!isSelf && (
+        {!fixed && (
           <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
             <input type="checkbox" name="is_active" defaultChecked={values.is_active} className="h-4 w-4 accent-teal-600" />
             Account active (unticked accounts cannot see any records)

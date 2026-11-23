@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Pencil, Search, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
+import { CheckCircle2, Crown, Pencil, Search, ShieldCheck, UserCheck, UserPlus, UserX, Users } from "lucide-react";
 import { Avatar } from "@/components/avatar";
 import { Badge } from "@/components/badge";
 import { CopyInviteLink } from "@/components/copy-invite-link";
@@ -21,6 +21,7 @@ type Staff = {
   job_title: string | null;
   role: string;
   is_active: boolean;
+  is_owner: boolean;
   avatar_url: string | null;
   created_at: string;
 };
@@ -33,12 +34,13 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
   const q = typeof sp.q === "string" ? sp.q.trim().toLowerCase() : "";
   const roleFilter = typeof sp.role === "string" ? sp.role : "";
   const saved = sp.saved === "1";
+  const created = typeof sp.created === "string";
 
   const supabase = await createClient();
   const [{ data }, { data: signIns }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, email, phone, job_title, role, is_active, avatar_url, created_at")
+      .select("id, full_name, email, phone, job_title, role, is_active, is_owner, avatar_url, created_at")
       .order("created_at", { ascending: false })
       .returns<Staff[]>(),
     supabase.rpc("staff_last_sign_in"),
@@ -66,8 +68,24 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
       <PageHeader
         title="Staff management"
         description="Approve new accounts, assign roles and control who can access hospital records."
-        actions={<CopyInviteLink />}
+        actions={
+          <>
+            <CopyInviteLink />
+            <Link
+              href="/staff/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
+            >
+              <UserPlus className="h-4 w-4" /> Add staff
+            </Link>
+          </>
+        }
       />
+
+      {created && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+          <CheckCircle2 className="h-4 w-4" /> Account created. The staff member can sign in now with the email and password you set.
+        </div>
+      )}
 
       {saved && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
@@ -130,6 +148,11 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                       <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                         {s.full_name || "—"}
                         {isMe && <span className="text-xs font-normal text-slate-400">(you)</span>}
+                        {s.is_owner && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            <Crown className="h-3 w-3" /> Owner
+                          </span>
+                        )}
                         <Badge value={s.role === "admin" ? "completed" : s.role === "pending" ? "pending" : "scheduled"} label={roleLabel(s.role)} />
                         {!s.is_active && <Badge value="cancelled" label="Deactivated" />}
                       </p>
@@ -152,7 +175,7 @@ export default async function StaffPage({ searchParams }: PageProps<"/staff">) {
                         </button>
                       </form>
                     )}
-                    {!isMe && (
+                    {!isMe && !s.is_owner && (
                       <form action={setActive.bind(null, s.id, !s.is_active)}>
                         <button
                           className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
